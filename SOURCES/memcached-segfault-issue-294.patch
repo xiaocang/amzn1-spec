@@ -1,0 +1,247 @@
+From 07dba1d4b83b29675c2bf67b623f4d7d46b3d7ed Mon Sep 17 00:00:00 2001
+From: Trond Norbye <trond.norbye@gmail.com>
+Date: Wed, 17 Oct 2012 11:06:06 +0200
+Subject: [PATCH 1/2] Issue 294: Check for allocation failure
+
+---
+ thread.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/thread.c b/thread.c
+index 4e3e2395c..a4302cb8f 100644
+--- a/thread.c
++++ b/thread.c
+@@ -447,6 +447,13 @@ void dispatch_conn_new(int sfd, enum conn_states init_state, int event_flags,
+                        int read_buffer_size, enum network_transport transport) {
+     CQ_ITEM *item = cqi_new();
+     char buf[1];
++    if (item == NULL) {
++        close(sfd);
++        /* given that malloc failed this may also fail, but let's try */
++        fprintf(stderr, "Failed to allocate memory for connection object\n");
++        return ;
++    }
++
+     int tid = (last_thread + 1) % settings.num_threads;
+ 
+     LIBEVENT_THREAD *thread = threads + tid;
+
+From 73e1d82a130c83817bc87ee15cb3488769cc4c1b Mon Sep 17 00:00:00 2001
+From: Trond Norbye <trond.norbye@gmail.com>
+Date: Wed, 17 Oct 2012 11:06:38 +0200
+Subject: [PATCH 2/2] Add statistics for allocation failures
+
+This patch adds a new stat "malloc_fails" that is a counter of how
+many times malloc/realloc/calloc returned NULL when we _needed_ it to
+return something else (resulting in closing the connection or something
+like that). Conditions where we could live without malloc returning
+a new chunk of memory is not tracked with this counter.
+---
+ memcached.c | 65 ++++++++++++++++++++++++++++++++++++++++++++---------
+ memcached.h |  1 +
+ thread.c    |  6 ++++-
+ 3 files changed, 60 insertions(+), 12 deletions(-)
+
+diff --git a/memcached.c b/memcached.c
+index 23b771a74..11282e59a 100644
+--- a/memcached.c
++++ b/memcached.c
+@@ -170,6 +170,7 @@ static void stats_init(void) {
+     stats.curr_items = stats.total_items = stats.curr_conns = stats.total_conns = stats.conn_structs = 0;
+     stats.get_cmds = stats.set_cmds = stats.get_hits = stats.get_misses = stats.evictions = stats.reclaimed = 0;
+     stats.touch_cmds = stats.touch_misses = stats.touch_hits = stats.rejected_conns = 0;
++    stats.malloc_fails = 0;
+     stats.curr_bytes = stats.listen_disabled_num = 0;
+     stats.hash_power_level = stats.hash_bytes = stats.hash_is_expanding = 0;
+     stats.expired_unfetched = stats.evicted_unfetched = 0;
+@@ -189,6 +190,7 @@ static void stats_reset(void) {
+     STATS_LOCK();
+     stats.total_items = stats.total_conns = 0;
+     stats.rejected_conns = 0;
++    stats.malloc_fails = 0;
+     stats.evictions = 0;
+     stats.reclaimed = 0;
+     stats.listen_disabled_num = 0;
+@@ -240,8 +242,12 @@ static int add_msghdr(conn *c)
+ 
+     if (c->msgsize == c->msgused) {
+         msg = realloc(c->msglist, c->msgsize * 2 * sizeof(struct msghdr));
+-        if (! msg)
++        if (! msg) {
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
+             return -1;
++        }
+         c->msglist = msg;
+         c->msgsize *= 2;
+     }
+@@ -356,7 +362,10 @@ conn *conn_new(const int sfd, enum conn_states init_state,
+ 
+     if (NULL == c) {
+         if (!(c = (conn *)calloc(1, sizeof(conn)))) {
+-            fprintf(stderr, "calloc()\n");
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
++            fprintf(stderr, "Failed to allocate connection object\n");
+             return NULL;
+         }
+         MEMCACHED_CONN_CREATE(c);
+@@ -386,7 +395,10 @@ conn *conn_new(const int sfd, enum conn_states init_state,
+         if (c->rbuf == 0 || c->wbuf == 0 || c->ilist == 0 || c->iov == 0 ||
+                 c->msglist == 0 || c->suffixlist == 0) {
+             conn_free(c);
+-            fprintf(stderr, "malloc()\n");
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
++            fprintf(stderr, "Failed to allocate buffers for connection\n");
+             return NULL;
+         }
+ 
+@@ -670,8 +682,12 @@ static int ensure_iov_space(conn *c) {
+         int i, iovnum;
+         struct iovec *new_iov = (struct iovec *)realloc(c->iov,
+                                 (c->iovsize * 2) * sizeof(struct iovec));
+-        if (! new_iov)
++        if (! new_iov) {
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
+             return -1;
++        }
+         c->iov = new_iov;
+         c->iovsize *= 2;
+ 
+@@ -754,12 +770,18 @@ static int build_udp_headers(conn *c) {
+ 
+     if (c->msgused > c->hdrsize) {
+         void *new_hdrbuf;
+-        if (c->hdrbuf)
++        if (c->hdrbuf) {
+             new_hdrbuf = realloc(c->hdrbuf, c->msgused * 2 * UDP_HEADER_SIZE);
+-        else
++        } else {
+             new_hdrbuf = malloc(c->msgused * 2 * UDP_HEADER_SIZE);
+-        if (! new_hdrbuf)
++        }
++
++        if (! new_hdrbuf) {
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
+             return -1;
++        }
+         c->hdrbuf = (unsigned char *)new_hdrbuf;
+         c->hdrsize = c->msgused * 2;
+     }
+@@ -1436,6 +1458,9 @@ static bool grow_stats_buf(conn *c, size_t needed) {
+             c->stats.buffer = ptr;
+             c->stats.size = nsize;
+         } else {
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
+             rv = false;
+         }
+     }
+@@ -1559,6 +1584,9 @@ static void bin_read_key(conn *c, enum bin_substates next_substate, int extra) {
+             }
+             char *newm = realloc(c->rbuf, nsize);
+             if (newm == NULL) {
++                STATS_LOCK();
++                stats.malloc_fails++;
++                STATS_UNLOCK();
+                 if (settings.verbose) {
+                     fprintf(stderr, "%d: Failed to grow buffer.. closing connection\n",
+                             c->sfd);
+@@ -2589,6 +2617,8 @@ static void server_stats(ADD_STAT add_stats, conn *c) {
+         APPEND_STAT("slab_reassign_running", "%u", stats.slab_reassign_running);
+         APPEND_STAT("slabs_moved", "%llu", stats.slabs_moved);
+     }
++    APPEND_STAT("malloc_fails", "%llu",
++                (unsigned long long)stats.malloc_fails);
+     STATS_UNLOCK();
+ }
+ 
+@@ -2733,6 +2763,9 @@ static inline void process_get_command(conn *c, token_t *tokens, size_t ntokens,
+                         c->isize *= 2;
+                         c->ilist = new_list;
+                     } else {
++                        STATS_LOCK();
++                        stats.malloc_fails++;
++                        STATS_UNLOCK();
+                         item_remove(it);
+                         break;
+                     }
+@@ -2758,6 +2791,9 @@ static inline void process_get_command(conn *c, token_t *tokens, size_t ntokens,
+                         c->suffixsize *= 2;
+                         c->suffixlist  = new_suffix_list;
+                     } else {
++                        STATS_LOCK();
++                        stats.malloc_fails++;
++                        STATS_UNLOCK();
+                         item_remove(it);
+                         break;
+                     }
+@@ -2765,9 +2801,12 @@ static inline void process_get_command(conn *c, token_t *tokens, size_t ntokens,
+ 
+                   suffix = cache_alloc(c->thread->suffix_cache);
+                   if (suffix == NULL) {
+-                    out_string(c, "SERVER_ERROR out of memory making CAS suffix");
+-                    item_remove(it);
+-                    return;
++                      STATS_LOCK();
++                      stats.malloc_fails++;
++                      STATS_UNLOCK();
++                      out_string(c, "SERVER_ERROR out of memory making CAS suffix");
++                      item_remove(it);
++                      return;
+                   }
+                   *(c->suffixlist + i) = suffix;
+                   int suffix_len = snprintf(suffix, SUFFIX_SIZE,
+@@ -3581,8 +3620,12 @@ static enum try_read_result try_read_network(conn *c) {
+             ++num_allocs;
+             char *new_rbuf = realloc(c->rbuf, c->rsize * 2);
+             if (!new_rbuf) {
+-                if (settings.verbose > 0)
++                STATS_LOCK();
++                stats.malloc_fails++;
++                STATS_UNLOCK();
++                if (settings.verbose > 0) {
+                     fprintf(stderr, "Couldn't realloc input buffer\n");
++                }
+                 c->rbytes = 0; /* ignore what we read */
+                 out_string(c, "SERVER_ERROR out of memory reading request");
+                 c->write_and_go = conn_closing;
+diff --git a/memcached.h b/memcached.h
+index 8a513525e..06f144c3d 100644
+--- a/memcached.h
++++ b/memcached.h
+@@ -250,6 +250,7 @@ struct stats {
+     unsigned int  curr_conns;
+     unsigned int  total_conns;
+     uint64_t      rejected_conns;
++    uint64_t      malloc_fails;
+     unsigned int  reserved_fds;
+     unsigned int  conn_structs;
+     uint64_t      get_cmds;
+diff --git a/thread.c b/thread.c
+index a4302cb8f..54b45ca4f 100644
+--- a/thread.c
++++ b/thread.c
+@@ -263,8 +263,12 @@ static CQ_ITEM *cqi_new(void) {
+ 
+         /* Allocate a bunch of items at once to reduce fragmentation */
+         item = malloc(sizeof(CQ_ITEM) * ITEMS_PER_ALLOC);
+-        if (NULL == item)
++        if (NULL == item) {
++            STATS_LOCK();
++            stats.malloc_fails++;
++            STATS_UNLOCK();
+             return NULL;
++        }
+ 
+         /*
+          * Link together all the new items except the first one

@@ -1,0 +1,61 @@
+From dbb7a8af90054bf4ef51f5814ef7ceb17d83d974 Mon Sep 17 00:00:00 2001
+From: dormando <dormando@rydia.net>
+Date: Tue, 27 Feb 2018 10:50:45 -0800
+Subject: [PATCH] disable UDP port by default
+
+As reported, UDP amplification attacks have started to use insecure
+internet-exposed memcached instances. UDP used to be a lot more popular as a
+transport for memcached many years ago, but I'm not aware of many recent
+users.
+
+Ten years ago, the TCP connection overhead from many clients was relatively
+high (dozens or hundreds per client server), but these days many clients are
+batched, or user fewer processes, or simply anre't worried about it.
+
+While changing the default to listen on localhost only would also help, the
+true culprit is UDP. There are many more use cases for using memcached over
+the network than there are for using the UDP protocol.
+
+[iweller@amazon.com: backport to 1.4.15]
+---
+ memcached.c  | 6 ++----
+ t/issue_67.t | 2 +-
+ 2 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/memcached.c b/memcached.c
+index cd96c5b..f8bfda2 100644
+--- a/memcached.c
++++ b/memcached.c
+@@ -202,7 +202,7 @@ static void settings_init(void) {
+     settings.use_cas = true;
+     settings.access = 0700;
+     settings.port = 11211;
+-    settings.udpport = 11211;
++    settings.udpport = 0;
+     /* By default this string should be NULL for getaddrinfo() */
+     settings.inter = NULL;
+     settings.maxbytes = 64 * 1024 * 1024; /* default is 64MB */
+@@ -5078,9 +5078,7 @@ int main (int argc, char **argv) {
+         }
+     }
+ 
+-    if (tcp_specified && !udp_specified) {
+-        settings.udpport = settings.port;
+-    } else if (udp_specified && !tcp_specified) {
++    if (udp_specified && !tcp_specified) {
+         settings.port = settings.udpport;
+     }
+ 
+diff --git a/t/issue_67.t b/t/issue_67.t
+index c6b8b4c..a5becef 100644
+--- a/t/issue_67.t
++++ b/t/issue_67.t
+@@ -73,7 +73,7 @@ sub when {
+ 
+ # Disabling the defaults since it conflicts with a running instance.
+ # when('no arguments', '', 11211, 11211);
+-when('specifying tcp port', '-p 11212', 11212, 11212);
++when('specifying tcp port', '-p 11212', 11212, -1);
+ when('specifying udp port', '-U 11222', 11222, 11222);
+ when('specifying tcp ephemeral port', '-p -1', 0, 0);
+ when('specifying udp ephemeral port', '-U -1', 0, 0);
