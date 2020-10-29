@@ -116,6 +116,9 @@ make check
 %{_docdir}/%{name}-devel-%{version}/sample/*
 
 %changelog
+* Thu Oct 29 2020 Johnny Wang <wangjiahao@openresty.com>
+- update to 2.0.22
+
 * Tue Mar 17 2015 Ben Cressey <bcressey@amazon.com>
 - build with system python
 
