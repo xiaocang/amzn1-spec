@@ -1,3 +1,3 @@
 theme: jekyll-theme-minimal
 title: RPM packages for amazonlinux-1
-show_downloads: "true"
+# show_downloads: "true"
