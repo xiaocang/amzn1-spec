@@ -13,7 +13,7 @@
 
 Name:           memcached
 Version:        1.4.15
-Release:        11%{?_buildid}%{?dist}
+Release:        12%{?_buildid}%{?dist}
 Epoch:          0
 Summary:        High Performance, Distributed Memory Object Cache
 
@@ -99,7 +99,7 @@ access to the memcached binary include files.
 export CFLAGS="%{optflags} -pie -fpie"
 export LDFLAGS="-Wl,-z,relro,-z,now"
 
-%configure 
+%configure --enable-tls
 sed -i 's/-Werror/ /' Makefile
 make %{?_smp_mflags}
 
@@ -231,6 +231,9 @@ exit 0
 %{_includedir}/memcached/*
 
 %changelog
+* Wed Nov 10 2021 Johnny Wang <wangjiahao@openresty.com> - 0:1.4.15-12
+- Enable tls.
+
 * Sun Sep 27 2020 Johnny Wang <wangjiahao@openresty.com> - 0:1.4.15-11
 - Issue 294: Check for allocation failure
 
