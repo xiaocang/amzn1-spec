@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build RPM Package
         run: |
-          yum install -y spectool git doxygen gcc createrepo
+          yum install -y spectool git doxygen gcc createrepo openssl-devel
           mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
 
           cp SOURCES/* ~/rpmbuild/SOURCES/
