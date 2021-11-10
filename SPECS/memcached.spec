@@ -1,4 +1,4 @@
-%define _buildid .15
+%define _buildid .1
 
 %define username   memcached
 %define groupname  memcached
@@ -12,15 +12,15 @@
 %endif
 
 Name:           memcached
-Version:        1.4.15
-Release:        12%{?_buildid}%{?dist}
+Version:        1.5.13
+Release:        1%{?_buildid}%{?dist}
 Epoch:          0
 Summary:        High Performance, Distributed Memory Object Cache
 
 Group:          System Environment/Daemons
 License:        BSD
 URL:            http://www.memcached.org/
-Source0:        http://memcached.org/files/old/%{name}-%{version}.tar.gz
+Source0:        http://memcached.org/files/%{name}-%{version}.tar.gz
 
 # custom unit file
 Source1:        memcached.service
@@ -28,23 +28,24 @@ Source1:        memcached.service
 Source2:        memcached.sysv
 
 # Patches
-Patch001:       memcached-manpages.patch
-Patch002:       memcached-CVE-2011-4971.patch
-Patch003:       memcached-CVE-2013-0179_7290_7291.patch
-Patch004:       memcached-CVE-2013-7239.patch
-Patch005:       memcached-ipv6.patch
-Patch006:       memcached-CVE-2016-8704_8705_8706.patch
-Patch007:       memcached-segfault-issue-294.patch
+#Patch001:       memcached-manpages.patch
+#Patch002:       memcached-CVE-2011-4971.patch
+#Patch003:       memcached-CVE-2013-0179_7290_7291.patch
+#Patch004:       memcached-CVE-2013-7239.patch
+#Patch005:       memcached-ipv6.patch
+#Patch006:       memcached-CVE-2016-8704_8705_8706.patch
+#Patch007:       memcached-segfault-issue-294.patch
 
 # Amazon patches
 # https://github.com/memcached/memcached/commit/dbb7a8af90054bf4ef51f5814ef7ceb17d83d974
-Patch1000:      memcached-disable-udp-by-default.patch
+#Patch1000:      memcached-disable-udp-by-default.patch
 
 
 # Fixes
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  git
 BuildRequires:  libevent-devel
+BuildRequires:  openresty-openssl111-devel
 %if %{with tests}
 BuildRequires:  perl(Test::More), perl(Test::Harness)
 %endif
@@ -62,6 +63,7 @@ Requires(post): /sbin/chkconfig
 Requires(preun): /sbin/chkconfig, /sbin/service
 Requires(postun): /sbin/service
 %endif
+Requires: openresty-openssl111
 
 
 # as of 3.5.5-4 selinux has memcache included
@@ -83,23 +85,25 @@ access to the memcached binary include files.
 
 %prep
 %setup -q
-%patch001 -p1 -b .manpages
-%patch002 -p1 -b .CVE-2011-4971
-%patch003 -p1 -b .CVE-2013-0179_7290_7291
-%patch004 -p1 -b .CVE-2013-7239
-%patch005 -p1 -b .ipv6
-%patch006 -p1 -b .CVE-2016-8704_8705_8706
-%patch007 -p1 -b .segfault-issue-294
+
+# NB: do not need these patches for 1.5.x or later
+#%patch001 -p1 -b .manpages
+#%patch002 -p1 -b .CVE-2011-4971
+#%patch003 -p1 -b .CVE-2013-0179_7290_7291
+#%patch004 -p1 -b .CVE-2013-7239
+#%patch005 -p1 -b .ipv6
+#%patch006 -p1 -b .CVE-2016-8704_8705_8706
+#%patch007 -p1 -b .segfault-issue-294
 
 # Amazon patches
-%patch1000 -p1
+#%patch1000 -p1
 
 %build
 # compile with full RELRO
 export CFLAGS="%{optflags} -pie -fpie"
 export LDFLAGS="-Wl,-z,relro,-z,now"
 
-%configure --enable-tls
+%configure --enable-tls --with-libssl=/usr/local/openresty/openssl111
 sed -i 's/-Werror/ /' Makefile
 make %{?_smp_mflags}
 
