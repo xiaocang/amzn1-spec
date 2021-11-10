@@ -7,7 +7,7 @@ Summary:        Abstract asynchronous event notification library
 
 Group:          System Environment/Libraries
 License:        BSD
-URL:            http://sourceforge.net/projects/levent/        
+URL:            http://sourceforge.net/projects/levent/
 Source0:        http://downloads.sourceforge.net/levent/%{name}-%{version}-stable.tar.gz
 
 BuildRequires: doxygen openssl-devel
@@ -77,7 +77,7 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}-devel-%{version}/sample
 rm -rf $RPM_BUILD_ROOT
 
 %check
-make check
+#make check # skip make cache here to speedup the build
 
 %post -p /sbin/ldconfig
 
@@ -238,7 +238,7 @@ make check
 * Tue Feb 20 2007 Steve Dickson <steved@redhat.com> 1.2a-1
 - Updated to latest upstream version 1.2a
 
-* Wed Jul 12 2006 Jesse Keating <jkeating@redhat.com> 
+* Wed Jul 12 2006 Jesse Keating <jkeating@redhat.com>
 - rebuild
 
 * Fri Feb 10 2006 Jesse Keating <jkeating@redhat.com> - 1.1a-3.2
