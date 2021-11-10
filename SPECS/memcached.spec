@@ -13,7 +13,7 @@
 
 Name:           memcached
 Version:        1.5.13
-Release:        1%{?_buildid}%{?dist}
+Release:        2%{?_buildid}%{?dist}
 Epoch:          0
 Summary:        High Performance, Distributed Memory Object Cache
 
@@ -26,6 +26,8 @@ Source0:        https://www.memcached.org/files/%{name}-%{version}.tar.gz
 Source1:        memcached.service
 # custom init script
 Source2:        memcached.sysv
+
+AutoReqProv:    no
 
 # Patches
 #Patch001:       memcached-manpages.patch

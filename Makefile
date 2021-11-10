@@ -28,11 +28,13 @@ clean:
 openresty-zlib: /etc/yum.repos.d/local-base-$(TARGET).repo
 	spectool -C ~/rpmbuild/SOURCES/ -gf SPECS/openresty-zlib.spec
 	rpmbuild -ba --target=$(TARGET) -ba SPECS/openresty-zlib.spec
-	sudo createrepo ~/rpmbuild/RPMS/$(TARGET)
+	sudo createrepo --update ~/rpmbuild/RPMS/$(TARGET)
+	sudo yum clean all
 	sudo yum install -y openresty-zlib-devel
 
 openresty-openssl111: /etc/yum.repos.d/local-base-$(TARGET).repo
 	spectool -C ~/rpmbuild/SOURCES/ -gf SPECS/openresty-openssl111.spec
 	rpmbuild -ba --target=$(TARGET) SPECS/openresty-openssl111.spec
-	sudo createrepo ~/rpmbuild/RPMS/$(TARGET)
+	sudo createrepo --update ~/rpmbuild/RPMS/$(TARGET)
+	sudo yum clean all
 	sudo yum install -y openresty-openssl111-devel
