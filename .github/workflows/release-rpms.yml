@@ -23,7 +23,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build RPM Package
         run: |
-          yum install -y spectool git doxygen gcc createrepo openssl-devel
+          yum install -y spectool git doxygen gcc createrepo openssl-devel \
+            yum-utils
           mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
 
           cp SOURCES/* ~/rpmbuild/SOURCES/
@@ -37,19 +38,23 @@ jobs:
           enabled=1\n\
           enabled_metadata=1" | tee /etc/yum.repos.d/local-base.repo
 
-          curl -SsLo /etc/yum.repos.d/openresty.repo https://openresty.org/package/amazon/openresty.repo
+          curl -SsLo /etc/yum.repos.d/openresty.repo \
+            https://openresty.org/package/amazon/openresty.repo
           yum install -y openresty-openssl111-devel
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/libevent.spec
+          yum-builddep -y SPECS/libevent.spec
           rpmbuild -ba SPECS/libevent.spec
 
           createrepo ~/rpmbuild/RPMS/x86_64
           yum install -y --disablerepo=* --enablerepo=local-base libevent-devel
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/memcached.spec
+          yum-builddep -y SPECS/memcached.spec
           rpmbuild -ba SPECS/memcached.spec
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
+          yum-builddep -y SPECS/ccache.spec
           rpmbuild -ba SPECS/ccache.spec
       - name: Check RPM Packages
         run: |
