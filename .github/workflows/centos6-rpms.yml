@@ -1,0 +1,78 @@
+---
+# This is a basic workflow to help you get started with Actions
+
+name: centos6-rpm
+
+on:
+  push:
+    tags:
+      - 'el6*'
+
+jobs:
+  build-amzn1-rpm:
+    # The type of runner that the container will run on
+    runs-on: ubuntu-latest
+
+    # The image of docker that the job will run on
+    container:
+      image: "centos:6"
+      options: --dns 8.8.8.8
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build RPM Package
+        run: |
+          yum install -y spectool git doxygen gcc createrepo openssl-devel \
+            yum-utils
+          mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
+
+          cp SOURCES/* ~/rpmbuild/SOURCES/
+
+          printf "[local-base]\n\
+          name=Local Base Repo\n\
+          baseurl=file://$HOME/rpmbuild/RPMS/x86_64/\n\
+          skip_if_unavailable=True\n\
+          gpgcheck=0\n\
+          repo_gpgcheck=0\n\
+          enabled=1\n\
+          enabled_metadata=1" | tee /etc/yum.repos.d/local-base.repo
+
+          curl -SsLo /etc/yum.repos.d/openresty.repo \
+            https://openresty.org/package/amazon/openresty.repo
+          yum install -y openresty-openssl111-devel
+
+          spectool -gf -C ~/rpmbuild/SOURCES SPECS/libevent.spec
+          yum-builddep -y SPECS/libevent.spec
+          rpmbuild -ba SPECS/libevent.spec
+
+          createrepo ~/rpmbuild/RPMS/x86_64
+          yum install -y --disablerepo=* --enablerepo=local-base libevent-devel
+
+          spectool -gf -C ~/rpmbuild/SOURCES SPECS/memcached.spec
+          yum-builddep -y SPECS/memcached.spec
+          rpmbuild -ba SPECS/memcached.spec
+
+          spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
+          yum-builddep -y SPECS/ccache.spec
+          rpmbuild -ba SPECS/ccache.spec
+      - name: Check RPM Packages
+        run: |
+          echo "MEMCACHED_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-[0-9]*.rpm)" >> $GITHUB_ENV
+          echo "MEMCACHED_DEV_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-devel-[0-9]*.rpm)" >> $GITHUB_ENV
+          echo "LIBEVENT_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/libevent-[0-9]*.rpm)" >> $GITHUB_ENV
+          echo "LIBEVENT_DEV_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/libevent-devel-[0-9]*.rpm)" >> $GITHUB_ENV
+          echo "CCACHE_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/ccache-[0-9]*.rpm)" >> $GITHUB_ENV
+      - name: Upload Artifact
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          files: |
+            ${{ env.MEMCACHED_RPM }}
+            ${{ env.MEMCACHED_DEV_RPM }}
+            ${{ env.LIBEVENT_RPM }}
+            ${{ env.LIBEVENT_DEV_RPM }}
+            ${{ env.CCACHE_RPM }}
+          draft: true
+
+# vim: set ts=2 sw=2:
