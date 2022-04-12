@@ -8,6 +8,13 @@
 %endif
 %endif
 
+
+%if 0%{?el6}
+%define with_clang 0
+%else
+%define with_clang 1
+%endif
+
 %define abs2rel() perl -MFile::Spec -e 'print File::Spec->abs2rel(@ARGV)' %1 %2
 %global relccache %(%abs2rel %{_bindir}/ccache %{_libdir}/ccache)
 
@@ -22,8 +29,11 @@ Source0:        https://github.com/ccache/ccache/releases/download/v%{version}/%
 
 BuildRequires:  perl(File::Spec)
 BuildRequires:  zlib-devel >= 1.2.3
+
+%if 0%{?with_clang}
 # clang for additional tests
 BuildRequires:  clang
+%endif
 # coreutils for triggerin, triggerpostun
 Requires:       coreutils
 # For groupadd
@@ -78,9 +88,11 @@ for n in cc gcc g++ c++ ; do
             $RPM_BUILD_ROOT%{_libdir}/ccache/$a-%{_vendor}-%{_target_os}-$n
     done
 done
+%if 0%{?with_clang}
 for n in clang clang++ ; do
     ln -s %{relccache} $RPM_BUILD_ROOT%{_libdir}/ccache/$n
 done
+%endif
 find $RPM_BUILD_ROOT%{_libdir}/ccache -type l | \
     sed -e "s|^$RPM_BUILD_ROOT|%%ghost |" > %{name}-%{version}.compilers
 
@@ -116,7 +128,9 @@ done\
 %ccache_trigger -p arm-none-eabi-gcc-cs arm-none-eabi-gcc
 %ccache_trigger -p avr-gcc avr-cc avr-gcc
 %ccache_trigger -p avr-gcc-c++ avr-c++ avr-g++
+%if 0%{?with_clang}
 %ccache_trigger -p clang clang clang++
+%endif
 %ccache_trigger -p compat-gcc-32 cc32 gcc32
 %ccache_trigger -p compat-gcc-32-c++ c++32 g++32
 %ccache_trigger -p compat-gcc-34 cc34 gcc34
