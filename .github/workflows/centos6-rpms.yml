@@ -49,17 +49,6 @@ jobs:
             https://openresty.org/package/centos/openresty.repo
           yum install -y openresty-openssl111-devel
 
-          spectool -gf -C ~/rpmbuild/SOURCES SPECS/libevent.spec
-          yum-builddep -y SPECS/libevent.spec
-          rpmbuild -ba SPECS/libevent.spec
-
-          createrepo ~/rpmbuild/RPMS/x86_64
-          yum install -y --disablerepo=* --enablerepo=local-base libevent-devel
-
-          spectool -gf -C ~/rpmbuild/SOURCES SPECS/memcached.spec
-          yum-builddep -y SPECS/memcached.spec
-          rpmbuild -ba SPECS/memcached.spec
-
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
           yum-builddep -y SPECS/ccache.spec
           rpmbuild -ba SPECS/ccache.spec
