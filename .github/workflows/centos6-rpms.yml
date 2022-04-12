@@ -30,6 +30,7 @@ jobs:
               ; \
           done
 
+          chown "$USER:$USER" SPECS/ccache.spec
           ls -lh SPECS/ccache.spec
           exit 1
           # yum install -y spectool git doxygen gcc createrepo openssl-devel \
