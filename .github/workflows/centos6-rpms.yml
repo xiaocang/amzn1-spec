@@ -31,7 +31,7 @@ jobs:
           done
 
           useradd -u "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
-          groupadd -g "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
+          groupadd -g "$(ls -lh SPECS/ccache.spec | awk '{print $4}')" rpmbuilder
 
           ls -lh SPECS/ccache.spec
 
