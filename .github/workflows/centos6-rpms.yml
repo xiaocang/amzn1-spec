@@ -46,7 +46,7 @@ jobs:
           enabled_metadata=1" | tee /etc/yum.repos.d/local-base.repo
 
           curl -SsLo /etc/yum.repos.d/openresty.repo \
-            https://openresty.org/package/amazon/openresty.repo
+            https://openresty.org/package/centos/openresty.repo
           yum install -y openresty-openssl111-devel
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/libevent.spec
