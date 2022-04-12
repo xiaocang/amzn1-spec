@@ -51,7 +51,8 @@ jobs:
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
           yum-builddep -y SPECS/ccache.spec
-          cp SPECS/ccache.spec ~/rpmbuild/SPECS/ && rpmbuild -ba ~/SPECS/ccache.spec
+          cp SPECS/ccache.spec ~/rpmbuild/SPECS/ \
+            && rpmbuild -ba ~/rpmbuild/SPECS/ccache.spec
       - name: Check RPM Packages
         run: |
           echo "MEMCACHED_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-[0-9]*.rpm)" >> $GITHUB_ENV
