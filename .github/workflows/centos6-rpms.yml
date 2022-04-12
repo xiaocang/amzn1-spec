@@ -30,14 +30,9 @@ jobs:
               ; \
           done
 
-          useradd -u "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
-          groupadd -g "$(ls -lh SPECS/ccache.spec | awk '{print $4}')" rpmbuilder
-
-          ls -lh SPECS/ccache.spec
-
           yum install -y spectool git doxygen gcc createrepo openssl-devel \
             yum-utils
-          mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
+          mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS,SPECS}
 
           cp SOURCES/* ~/rpmbuild/SOURCES/
 
@@ -56,7 +51,7 @@ jobs:
 
           spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
           yum-builddep -y SPECS/ccache.spec
-          rpmbuild -ba SPECS/ccache.spec
+          cp SPECS/ccache.spec ~/rpmbuild/SPECS/ && rpmbuild -ba ~/SPECS/ccache.spec
       - name: Check RPM Packages
         run: |
           echo "MEMCACHED_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-[0-9]*.rpm)" >> $GITHUB_ENV
