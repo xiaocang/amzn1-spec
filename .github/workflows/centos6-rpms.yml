@@ -31,6 +31,9 @@ jobs:
           done
 
           useradd -u "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
+          groupadd -g "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
+
+          ls -lh SPECS/ccache.spec
 
           yum install -y spectool git doxygen gcc createrepo openssl-devel \
             yum-utils
