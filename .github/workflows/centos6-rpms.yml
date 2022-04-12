@@ -31,30 +31,29 @@ jobs:
           done
 
           useradd -u "$(ls -lh SPECS/ccache.spec | awk '{print $3}')" rpmbuilder
-          ls -lh SPECS/ccache.spec
-          exit 1
-          # yum install -y spectool git doxygen gcc createrepo openssl-devel \
-          #   yum-utils
-          # mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
 
-          # cp SOURCES/* ~/rpmbuild/SOURCES/
+          yum install -y spectool git doxygen gcc createrepo openssl-devel \
+            yum-utils
+          mkdir -p ~/rpmbuild/{SOURCES,BUILD,BUILDROOT,RPMS,SRPMS}
 
-          # printf "[local-base]\n\
-          # name=Local Base Repo\n\
-          # baseurl=file://$HOME/rpmbuild/RPMS/x86_64/\n\
-          # skip_if_unavailable=True\n\
-          # gpgcheck=0\n\
-          # repo_gpgcheck=0\n\
-          # enabled=1\n\
-          # enabled_metadata=1" | tee /etc/yum.repos.d/local-base.repo
+          cp SOURCES/* ~/rpmbuild/SOURCES/
 
-          # curl -SsLo /etc/yum.repos.d/openresty.repo \
-          #   https://openresty.org/package/centos/openresty.repo
-          # yum install -y openresty-openssl111-devel
+          printf "[local-base]\n\
+          name=Local Base Repo\n\
+          baseurl=file://$HOME/rpmbuild/RPMS/x86_64/\n\
+          skip_if_unavailable=True\n\
+          gpgcheck=0\n\
+          repo_gpgcheck=0\n\
+          enabled=1\n\
+          enabled_metadata=1" | tee /etc/yum.repos.d/local-base.repo
 
-          # spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
-          # yum-builddep -y SPECS/ccache.spec
-          # rpmbuild -ba SPECS/ccache.spec
+          curl -SsLo /etc/yum.repos.d/openresty.repo \
+            https://openresty.org/package/centos/openresty.repo
+          yum install -y openresty-openssl111-devel
+
+          spectool -gf -C ~/rpmbuild/SOURCES SPECS/ccache.spec
+          yum-builddep -y SPECS/ccache.spec
+          rpmbuild -ba SPECS/ccache.spec
       - name: Check RPM Packages
         run: |
           echo "MEMCACHED_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-[0-9]*.rpm)" >> $GITHUB_ENV
