@@ -213,7 +213,6 @@ getent group ccache >/dev/null || groupadd -r ccache || :
 
 
 %files -f %{name}-%{version}.compilers
-%license GPL-3.0.txt LICENSE.*
 %doc doc/AUTHORS.*  doc/MANUAL.* doc/NEWS.* README.md
 %{_bindir}/ccache
 %dir %{_libdir}/ccache/
