@@ -55,10 +55,6 @@ jobs:
             && rpmbuild -ba ~/rpmbuild/SPECS/ccache.spec
       - name: Check RPM Packages
         run: |
-          echo "MEMCACHED_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-[0-9]*.rpm)" >> $GITHUB_ENV
-          echo "MEMCACHED_DEV_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/memcached-devel-[0-9]*.rpm)" >> $GITHUB_ENV
-          echo "LIBEVENT_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/libevent-[0-9]*.rpm)" >> $GITHUB_ENV
-          echo "LIBEVENT_DEV_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/libevent-devel-[0-9]*.rpm)" >> $GITHUB_ENV
           echo "CCACHE_RPM=$(find $HOME/rpmbuild/RPMS/x86_64/ccache-[0-9]*.rpm)" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: softprops/action-gh-release@v1
@@ -66,10 +62,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           files: |
-            ${{ env.MEMCACHED_RPM }}
-            ${{ env.MEMCACHED_DEV_RPM }}
-            ${{ env.LIBEVENT_RPM }}
-            ${{ env.LIBEVENT_DEV_RPM }}
             ${{ env.CCACHE_RPM }}
           draft: true
 
